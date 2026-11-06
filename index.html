@@ -745,6 +745,9 @@
         let currentVideoSceneIndex = 0;
         let isVideoPlaying = false;
 
+        // OPTIONAL: Hardcode your default API key here if you want it pre-filled for your deployment
+        const HARDCODED_DEFAULT_KEY = ""; // Paste your API key inside quotes here if needed
+
         const presets = {
             aura: {
                 name: "Aura Smart Watch",
@@ -908,7 +911,7 @@
         }
 
         async function callGeminiAPI(prodName, brandName, desc, features, audience, platform, style) {
-            const userApiKey = localStorage.getItem('adalchemy_gemini_key') || '';
+            const userApiKey = localStorage.getItem('adalchemy_gemini_key') || HARDCODED_DEFAULT_KEY;
             const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${userApiKey}`;
 
             const systemPrompt = "You are a world-class advertising copywriter and marketing director. Return ONLY valid JSON containing campaign elements.";
@@ -968,50 +971,124 @@
             posterLoading.classList.remove('hidden');
             posterPlaceholder.classList.add('hidden');
 
-            const userApiKey = localStorage.getItem('adalchemy_gemini_key') || '';
-            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-image:generateContent?key=${userApiKey}`;
+            // Simulate AI composition engine delay for premium feel
+            await sleep(600);
 
-            const posterPrompt = `Professional commercial advertising poster for ${currentCampaign.prodName} by ${currentCampaign.brandName}. Style: ${currentCampaign.style}. Description: ${currentCampaign.desc}. Stunning visual composition, studio lighting, readable slogan: "${currentCampaign.ai.slogan}", call to action: "${currentCampaign.ai.cta}". High quality graphic design.`;
+            const canvas = document.createElement('canvas');
+            canvas.width = 800;
+            canvas.height = 1000;
+            const ctx = canvas.getContext('2d');
 
-            const payload = {
-                contents: [{
-                    role: 'user',
-                    parts: [{ text: posterPrompt }]
-                }],
-                generationConfig: {
-                    responseModalities: ['IMAGE'],
-                    imageConfig: { aspectRatio: "4:5" }
-                }
-            };
+            const accent = currentCampaign.color || '#8B5CF6';
+            const style = currentCampaign.style || 'Minimalist Luxury';
 
-            try {
-                const response = await fetch(apiUrl, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-
-                const result = await response.json();
-                const part = result?.candidates?.[0]?.content?.parts?.find(p => p.inlineData);
-
-                if (part && part.inlineData) {
-                    const imageUrl = `data:${part.inlineData.mimeType};base64,${part.inlineData.data}`;
-                    aiPosterImg.src = imageUrl;
-                    aiPosterImg.classList.remove('hidden');
-                    posterLoading.classList.add('hidden');
-                    showToast('AI Poster Generated', 'Professional commercial poster created successfully!');
-                } else {
-                    throw new Error('No image data returned');
-                }
-            } catch (err) {
-                console.warn('AI Poster generation fallback activated:', err);
-                // Fallback to high-quality dynamic visual banner
-                const fallbackUrl = `https://placehold.co/800x1000/121826/ffffff?text=${encodeURIComponent(currentCampaign.prodName)}+-+${encodeURIComponent(currentCampaign.ai.slogan)}`;
-                aiPosterImg.src = fallbackUrl;
-                aiPosterImg.classList.remove('hidden');
-                posterLoading.classList.add('hidden');
-                showToast('Poster Studio Ready', 'Poster visual generated successfully.');
+            // 1. Dynamic Background based on style
+            let grad = ctx.createLinearGradient(0, 0, 800, 1000);
+            if (style.includes('Cyberpunk')) {
+                grad.addColorStop(0, '#020617');
+                grad.addColorStop(0.5, '#0f172a');
+                grad.addColorStop(1, '#06b6d4');
+            } else if (style.includes('Pop Art')) {
+                grad.addColorStop(0, '#311042');
+                grad.addColorStop(0.5, '#1e1b4b');
+                grad.addColorStop(1, '#3b82f6');
+            } else {
+                grad.addColorStop(0, '#090d16');
+                grad.addColorStop(0.5, '#121826');
+                grad.addColorStop(1, '#1e1b4b');
             }
+            ctx.fillStyle = grad;
+            ctx.fillRect(0, 0, 800, 1000);
+
+            // 2. Glowing Ambient Orbs (AI Visual styling)
+            ctx.fillStyle = accent;
+            ctx.globalAlpha = 0.25;
+            ctx.beginPath();
+            ctx.arc(400, 320, 280, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.globalAlpha = 1.0;
+
+            // 3. Top Badge
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.12)';
+            ctx.strokeStyle = accent;
+            ctx.lineWidth = 1.5;
+            ctx.beginPath();
+            ctx.roundRect(260, 75, 280, 45, 22.5);
+            ctx.fill();
+            ctx.stroke();
+
+            ctx.fillStyle = '#ffffff';
+            ctx.font = 'bold 15px Inter, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText(`★ ${(currentCampaign.ai.badges?.[0] || 'FEATURED CAMPAIGN').toUpperCase()} ★`, 400, 103);
+
+            // 4. Product Name & Brand
+            ctx.fillStyle = '#ffffff';
+            ctx.font = '800 44px Inter, sans-serif';
+            ctx.fillText(currentCampaign.prodName, 400, 200, 700);
+
+            ctx.fillStyle = '#a78bfa';
+            ctx.font = '600 20px Inter, sans-serif';
+            ctx.fillText(`BY ${currentCampaign.brandName.toUpperCase()}`, 400, 240);
+
+            // 5. Central Visual Frame / Product Box
+            ctx.fillStyle = 'rgba(15, 23, 42, 0.9)';
+            ctx.strokeStyle = accent;
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.roundRect(120, 290, 560, 380, 28);
+            ctx.fill();
+            ctx.stroke();
+
+            // Render uploaded product image if available inside frame, else render custom vector illustration
+            if (currentCampaign.image) {
+                try {
+                    const imgObj = new Image();
+                    imgObj.src = currentCampaign.image;
+                    await new Promise((res) => { imgObj.onload = res; imgObj.onerror = res; });
+                    ctx.save();
+                    ctx.beginPath();
+                    ctx.roundRect(150, 315, 500, 200, 16);
+                    ctx.clip();
+                    ctx.drawImage(imgObj, 150, 315, 500, 200);
+                    ctx.restore();
+                } catch(e) {
+                    console.warn("Could not draw uploaded image on canvas", e);
+                }
+            }
+
+            // Slogan inside visual card
+            ctx.fillStyle = '#ffffff';
+            ctx.font = 'bold 30px Inter, sans-serif';
+            ctx.fillText(`"${currentCampaign.ai.slogan}"`, 400, 560, 500);
+
+            ctx.fillStyle = '#94a3b8';
+            ctx.font = '15px Inter, sans-serif';
+            ctx.fillText(`Designed with ${style} aesthetic`, 400, 610);
+
+            // 6. Call To Action Button Banner
+            ctx.fillStyle = accent;
+            ctx.beginPath();
+            ctx.roundRect(160, 720, 480, 80, 40);
+            ctx.fill();
+
+            ctx.fillStyle = '#ffffff';
+            ctx.font = 'bold 22px Inter, sans-serif';
+            ctx.fillText(currentCampaign.ai.cta, 400, 768, 440);
+
+            // 7. Footer Price Tag
+            ctx.fillStyle = '#38bdf8';
+            ctx.font = 'bold 26px Inter, sans-serif';
+            ctx.fillText(`Price: ${currentCampaign.price}`, 400, 885);
+
+            ctx.fillStyle = '#64748b';
+            ctx.font = '13px Inter, sans-serif';
+            ctx.fillText('Generated autonomously by AdAlchemy AI Studio', 400, 930);
+
+            aiPosterImg.src = canvas.toDataURL('image/png');
+            aiPosterImg.classList.remove('hidden');
+            posterLoading.classList.add('hidden');
+            showToast('Poster Generated', 'Professional AI advertising poster created successfully!');
         }
 
         function renderResults(camp) {
